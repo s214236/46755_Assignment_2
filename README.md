@@ -18,3 +18,6 @@ In the "src" folder, three folders are found:
     For proper development, please have Ruff installed.
     After installement; go to File -> Preferences -> Settings.
         Turn on "Format on save".
+
+### Notes and links
+1. Wind data is taken from [renewables.ninja](https://www.renewables.ninja/). A random data set was generated based on a location around Kgs. Lyngby, DK. The first 20 days of the year were taken for the data set. The data was converted to MW from kW, and then a list was created to ease the copy-paste process into the json file. 
