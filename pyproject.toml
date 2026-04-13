@@ -3,17 +3,25 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "template_repo"
+name = "46755_Assignment_2"
 version = "0.1.0"
-description = "template_repo"
+description = "46755_Assignment_2 group 32"
 authors = [
-  { name = "Peter Mads Pedersen", email = "petermads123@hotmail.com" }
+  { name = "Peter Mads Pedersen", email = "s214236@dtu.dk" },
+  { name = "Andreas Tøffner Rosenmeier", email = "s214265@dtu.dk" },
+  { name = "Gustav Heron Melhus", email = "s214260@dtu.dk" },
+  { name = "Marte Kaasa Sydtveit", email = "s214237@dtu.dk" },
 ]
 readme = "README.md"
 requires-python = ">=3.13"
 
 # Runtime dependencies
-dependencies = []
+dependencies = [
+  "numpy",
+  "pandas",
+  "matplotlib",
+  "gurobipy",
+]
 
 # Optional groups (e.g. dev dependencies)
 [project.optional-dependencies]

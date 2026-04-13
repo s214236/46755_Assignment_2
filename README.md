@@ -1,10 +1,5 @@
-# template_repo
-The purpose of this repo is to simply give a template for future repos
-
-## Setup
-Add dependencies in pyproject.toml
-Also change project name in here
-Change the folder name (template_repo) to the same name
+# 46755_Assignment_2
+This repo contains code and data for group 32 for assignment 2
 
 ## Development
 1. Have git installed on your machine.
