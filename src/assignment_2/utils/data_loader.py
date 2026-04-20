@@ -13,7 +13,15 @@ def load_json_file(file_path: str) -> dict[str, list[float]]:
         dict[str, list[float]]: The content of the json file as a dictionary.
     """
     with open(file_path) as f:
-        return json.load(f)
+        data = json.load(f)
+
+    return {
+        key: [
+            float(value) if isinstance(value, (int, bool)) else value
+            for value in values
+        ]
+        for key, values in data.items()
+    }
 
 
 def load_da_prices() -> dict[str, list[float]]:
