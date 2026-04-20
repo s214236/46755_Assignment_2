@@ -6,6 +6,7 @@ In the "src" folder, three folders are found:
 - "data" contains json files for all data inputs
 - "step_1" is step 1 of the assignment
 - "step_2" is step 2 of the assignment
+- "utils" contains utility scripts for data processing
 
 ## Development
 1. Have git installed on your machine.
