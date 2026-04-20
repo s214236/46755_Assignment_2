@@ -21,6 +21,6 @@ In the "src" folder, three folders are found:
         Turn on "Format on save".
 
 ### Notes and links
-1. Wind data is taken from [renewables.ninja](https://www.renewables.ninja/). A random data set was generated based on a location around Kgs. Lyngby, DK. The first 20 days of the year 2019 were taken for the data set. The data was converted to MW from kW, and then a list was created to ease the copy-paste process into the json file. 
+1. Wind data is taken from [renewables.ninja](https://www.renewables.ninja/). A random data set was generated based on a location around Kgs. Lyngby, DK. A randomly picked set of 20 days of the year 2019 were taken for the data set. The data was converted to MW from kW, and then a list was created to ease the copy-paste process into the json file. 
 
 2. DA prices data is taken from [Entsoe](https://transparency.entsoe.eu/market/energyPrices?appState=%7B%22sa%22%3A%5B%22BZN%7C10YDK-2--------M%22%5D%2C%22st%22%3A%22BZN%22%2C%22mm%22%3Atrue%2C%22ma%22%3Afalse%2C%22sp%22%3A%22HALF%22%2C%22dt%22%3A%22TABLE%22%2C%22df%22%3A%222025-01-01%22%2C%22tz%22%3A%22CET%22%7D). The first days of every month is taken from January 2023 to August 2024 and converted to a json file.
