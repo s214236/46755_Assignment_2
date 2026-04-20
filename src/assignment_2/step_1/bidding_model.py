@@ -13,7 +13,8 @@ class DayAheadQuantityBiddingModel:
     def __init__(
         self,
         capacity: float,
-        scenarios: list[dict[str, float | dict[str, list[float]]]],
+        scenarios: list[dict[str, list[float]]],
+        weights: list[float],
         one_price_imbalance: bool = True,
     ) -> None:
         """Initialize the model.
@@ -24,16 +25,15 @@ class DayAheadQuantityBiddingModel:
 
         Args:
             capacity (float): Maximum quantity that can be bid in each hour.
-            scenarios (list[dict[str, float | dict[str, list[float]]]]): List of scenarios, where each scenario is a dictionary with
-                'data' and 'weight' keys.
+            scenarios (list[dict[str, list[float]]]): List of scenarios.
+            weights (list[float]): List of weights for each scenario.
             one_price_imbalance (bool): Whether to use a single price for imbalance penalties.
 
         """
-        self._validate_scenarios(scenarios)
         self.scenarios = scenarios
         self.num_scenarios = len(scenarios)
-        total_weight = sum(scenario["weight"] for scenario in scenarios)
-        self.weights = [scenario["weight"] / total_weight for scenario in scenarios]
+        total_weight = sum(weights)
+        self.weights = [weight / total_weight for weight in weights]
         self.capacity = capacity
         self.one_price_imbalance = one_price_imbalance
         self.create_model()
@@ -65,20 +65,19 @@ class DayAheadQuantityBiddingModel:
             quicksum(
                 self.weights[scenario_index]
                 * quicksum(
-                    self.vars["bid_quantity"][hour]
-                    * scenario["data"]["da_prices"][hour]
+                    self.vars["bid_quantity"][hour] * scenario["da_prices"][hour]
                     + self.vars["imbalance_positive"][hour, scenario_index]
-                    * scenario["data"]["da_prices"][hour]
+                    * scenario["da_prices"][hour]
                     * (
                         (1.25 if self.one_price_imbalance else 1.0)
-                        if (scenario["data"]["system_imbalance"][hour] == 1.0)
+                        if (scenario["system_imbalance"][hour] == 1.0)
                         else 0.85
                     )
                     - self.vars["imbalance_negative"][hour, scenario_index]
-                    * scenario["data"]["da_prices"][hour]
+                    * scenario["da_prices"][hour]
                     * (
                         (0.85 if self.one_price_imbalance else 1.0)
-                        if (scenario["data"]["system_imbalance"][hour] == 0.0)
+                        if (scenario["system_imbalance"][hour] == 0.0)
                         else 1.25
                     )
                     for hour in range(24)
@@ -94,7 +93,7 @@ class DayAheadQuantityBiddingModel:
                 self.constr[f"imbalance_real_{hour}_{scenario_index}"] = (
                     self.model.addLConstr(
                         self.vars["imbalance"][hour, scenario_index]
-                        == scenario["data"]["wind_power"][hour]
+                        == scenario["wind_power"][hour]
                         - self.vars["bid_quantity"][hour],
                         name=f"imbalance_real_{hour}_{scenario_index}",
                     )
@@ -129,67 +128,3 @@ class DayAheadQuantityBiddingModel:
         """Optimize the model."""
         self.model.optimize()
         self.bid_quantities = [self.vars["bid_quantity"][hour].X for hour in range(24)]
-
-    @classmethod
-    def _validate_scenarios(
-        cls, scenarios: list[dict[str, float | dict[str, list[float]]]]
-    ) -> None:
-        if not isinstance(scenarios, list):
-            raise TypeError("scenarios must be a list")
-
-        for scenario_index, scenario in enumerate(scenarios):
-            if not isinstance(scenario, dict):
-                raise TypeError(
-                    f"Scenario at index {scenario_index} must be a dictionary"
-                )
-
-            scenario_weight = scenario.get("weight")
-            if not isinstance(scenario_weight, float):
-                raise TypeError(
-                    f"Scenario at index {scenario_index} must contain a 'weight' of type float"
-                )
-
-            scenario_data = scenario.get("data")
-            if not isinstance(scenario_data, dict):
-                raise TypeError(
-                    f"Scenario at index {scenario_index} must contain a 'data' dictionary"
-                )
-
-            present_keys = set(scenario_data.keys())
-            if present_keys != cls.REQUIRED_DATA_KEYS:
-                missing_keys = sorted(cls.REQUIRED_DATA_KEYS - present_keys)
-                extra_keys = sorted(present_keys - cls.REQUIRED_DATA_KEYS)
-                details: list[str] = []
-
-                if missing_keys:
-                    details.append(f"missing keys: {missing_keys}")
-                if extra_keys:
-                    details.append(f"extra keys: {extra_keys}")
-
-                raise ValueError(
-                    "Scenario at index "
-                    f"{scenario_index} has invalid data keys ({'; '.join(details)})"
-                )
-
-            for key in cls.REQUIRED_DATA_KEYS:
-                values = scenario_data[key]
-                if not isinstance(values, list):
-                    raise TypeError(
-                        f"Scenario at index {scenario_index} key '{key}' must be a list"
-                    )
-
-                if len(values) != 24:
-                    raise ValueError(
-                        f"Scenario at index {scenario_index} key '{key}' must have exactly 24 values"
-                    )
-
-                non_float_indices = [
-                    value_index
-                    for value_index, value in enumerate(values)
-                    if not isinstance(value, float)
-                ]
-                if non_float_indices:
-                    raise TypeError(
-                        f"Scenario at index {scenario_index} key '{key}' contains non-float values "
-                        f"at indices {non_float_indices}"
-                    )

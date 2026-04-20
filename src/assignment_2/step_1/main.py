@@ -23,19 +23,37 @@ def main() -> None:
 
     # Create scenarios
     scenarios = create_scenarios(input_data)
+    weights: list[float] = [scenario["weight"] for scenario in scenarios]
+    scenarios: list[dict[str, list[float]]] = [
+        scenario["data"] for scenario in scenarios
+    ]
 
     in_sample_scenarios = scenarios[:in_sample_size]
     out_of_sample_scenarios = scenarios[in_sample_size:]
 
     # Initialize and solve the optimization model
-    model = DayAheadQuantityBiddingModel(
-        capacity=capacity, scenarios=in_sample_scenarios, one_price_imbalance=False
+    one_price = DayAheadQuantityBiddingModel(
+        capacity=capacity,
+        scenarios=in_sample_scenarios,
+        weights=weights,
+        one_price_imbalance=True,
     )
-    model.optimize()
+    one_price.optimize()
 
-    print("Optimal bid quantities for each hour:")
-    for hour, quantity in enumerate(model.bid_quantities):
-        print(f"Hour {hour}: {quantity}")
+    two_price = DayAheadQuantityBiddingModel(
+        capacity=capacity,
+        scenarios=in_sample_scenarios,
+        weights=weights,
+        one_price_imbalance=False,
+    )
+    two_price.optimize()
+
+    print("In-sample results:")
+    for i in range(24):
+        print(
+            f"Hour {i}: One-price bid = {one_price.vars['bid_quantity'][i].X:.2f}, "
+            f"Two-price bid = {two_price.vars['bid_quantity'][i].X:.2f}"
+        )
 
 
 if __name__ == "__main__":
