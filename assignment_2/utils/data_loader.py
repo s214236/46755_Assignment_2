@@ -26,14 +26,14 @@ def load_json_file(file_path: str) -> dict[str, list[float]]:
 
 def load_da_prices() -> dict[str, list[float]]:
     """Load the day-ahead price forecast from the json file."""
-    return load_json_file("src/assignment_2/data/da_prices.json")
+    return load_json_file("assignment_2/data/da_prices.json")
 
 
 def load_wind_power() -> dict[str, list[float]]:
     """Load the wind power forecast from the json file."""
-    return load_json_file("src/assignment_2/data/wind_power.json")
+    return load_json_file("assignment_2/data/wind_power.json")
 
 
 def load_system_imbalance() -> dict[str, list[float]]:
     """Load the system imbalance forecast from the json file."""
-    return load_json_file("src/assignment_2/data/system_imbalance.json")
+    return load_json_file("assignment_2/data/system_imbalance.json")

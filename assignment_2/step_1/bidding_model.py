@@ -8,8 +8,6 @@ from gurobipy import GRB, Constr, Model, Var, quicksum, tupledict
 class DayAheadQuantityBiddingModel:
     """Optimization model for quantity-based bidding in the day-ahead market."""
 
-    REQUIRED_DATA_KEYS = {"da_prices", "system_imbalance", "wind_power"}
-
     def __init__(
         self,
         capacity: float,
@@ -54,10 +52,10 @@ class DayAheadQuantityBiddingModel:
         )
 
         self.vars["imbalance_positive"] = self.model.addVars(
-            24, self.num_scenarios, lb=0.0, ub=GRB.INFINITY, name="imbalance_positive"
+            24, self.num_scenarios, lb=0.0, ub=self.capacity, name="imbalance_positive"
         )
         self.vars["imbalance_negative"] = self.model.addVars(
-            24, self.num_scenarios, lb=0.0, ub=GRB.INFINITY, name="imbalance_negative"
+            24, self.num_scenarios, lb=0.0, ub=self.capacity, name="imbalance_negative"
         )
 
         # Objective
@@ -127,4 +125,79 @@ class DayAheadQuantityBiddingModel:
     def optimize(self) -> None:
         """Optimize the model."""
         self.model.optimize()
-        self.bid_quantities = [self.vars["bid_quantity"][hour].X for hour in range(24)]
+        self.bid_quantities = [
+            round(self.vars["bid_quantity"][hour].X, 2) for hour in range(24)
+        ]
+        self.expected_profit = self.model.objVal
+
+        self.scenarios_profit = []
+        for scenario_index, scenario in enumerate(self.scenarios):
+            imbalance_positive = [
+                max(0, scenario["wind_power"][hour] - self.vars["bid_quantity"][hour].X)
+                for hour in range(24)
+            ]
+            imbalance_negative = [
+                max(0, self.vars["bid_quantity"][hour].X - scenario["wind_power"][hour])
+                for hour in range(24)
+            ]
+            profit = sum(
+                self.vars["bid_quantity"][hour].X * scenario["da_prices"][hour]
+                + imbalance_positive[hour]
+                * scenario["da_prices"][hour]
+                * (
+                    (1.25 if self.one_price_imbalance else 1.0)
+                    if (scenario["system_imbalance"][hour] == 1.0)
+                    else 0.85
+                )
+                - imbalance_negative[hour]
+                * scenario["da_prices"][hour]
+                * (
+                    (0.85 if self.one_price_imbalance else 1.0)
+                    if (scenario["system_imbalance"][hour] == 0.0)
+                    else 1.25
+                )
+                for hour in range(24)
+            )
+            self.scenarios_profit.append(profit)
+
+    def out_of_sample_profit(
+        self, out_of_sample_scenarios: list[dict[str, list[float]]]
+    ) -> float:
+        """Calculate the expected profit for out-of-sample scenarios.
+
+        Args:
+            out_of_sample_scenarios (list[dict[str, list[float]]]): List of out-of-sample scenarios.
+
+        Returns:
+            float: The expected profit for the out-of-sample scenarios.
+        """
+        total_profit = 0.0
+        for scenario_index, scenario in enumerate(out_of_sample_scenarios):
+            imbalance_positive = [
+                max(0, scenario["wind_power"][hour] - self.vars["bid_quantity"][hour].X)
+                for hour in range(24)
+            ]
+            imbalance_negative = [
+                max(0, self.vars["bid_quantity"][hour].X - scenario["wind_power"][hour])
+                for hour in range(24)
+            ]
+            profit = sum(
+                self.vars["bid_quantity"][hour].X * scenario["da_prices"][hour]
+                + imbalance_positive[hour]
+                * scenario["da_prices"][hour]
+                * (
+                    (1.25 if self.one_price_imbalance else 1.0)
+                    if (scenario["system_imbalance"][hour] == 1.0)
+                    else 0.85
+                )
+                - imbalance_negative[hour]
+                * scenario["da_prices"][hour]
+                * (
+                    (0.85 if self.one_price_imbalance else 1.0)
+                    if (scenario["system_imbalance"][hour] == 0.0)
+                    else 1.25
+                )
+                for hour in range(24)
+            )
+            total_profit += profit
+        return total_profit / len(out_of_sample_scenarios)
