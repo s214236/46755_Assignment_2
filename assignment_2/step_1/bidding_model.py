@@ -68,14 +68,14 @@ class DayAheadQuantityBiddingModel:
                     * scenario["da_prices"][hour]
                     * (
                         (1.25 if self.one_price_imbalance else 1.0)
-                        if (scenario["system_imbalance"][hour] == 1.0)
+                        if (scenario["system_imbalance"][hour] > 0.5)
                         else 0.85
                     )
                     - self.vars["imbalance_negative"][hour, scenario_index]
                     * scenario["da_prices"][hour]
                     * (
                         (0.85 if self.one_price_imbalance else 1.0)
-                        if (scenario["system_imbalance"][hour] == 0.0)
+                        if (scenario["system_imbalance"][hour] <= 0.5)
                         else 1.25
                     )
                     for hour in range(24)
@@ -146,14 +146,14 @@ class DayAheadQuantityBiddingModel:
                 * scenario["da_prices"][hour]
                 * (
                     (1.25 if self.one_price_imbalance else 1.0)
-                    if (scenario["system_imbalance"][hour] == 1.0)
+                    if (scenario["system_imbalance"][hour] > 0.5)
                     else 0.85
                 )
                 - imbalance_negative[hour]
                 * scenario["da_prices"][hour]
                 * (
                     (0.85 if self.one_price_imbalance else 1.0)
-                    if (scenario["system_imbalance"][hour] == 0.0)
+                    if (scenario["system_imbalance"][hour] <= 0.5)
                     else 1.25
                 )
                 for hour in range(24)
@@ -171,6 +171,11 @@ class DayAheadQuantityBiddingModel:
         Returns:
             float: The expected profit for the out-of-sample scenarios.
         """
+        if not hasattr(self, "bid_quantities"):
+            raise ValueError(
+                "Model must be optimized before calculating out-of-sample profit."
+            )
+
         total_profit = 0.0
         for scenario_index, scenario in enumerate(out_of_sample_scenarios):
             imbalance_positive = [
@@ -187,14 +192,14 @@ class DayAheadQuantityBiddingModel:
                 * scenario["da_prices"][hour]
                 * (
                     (1.25 if self.one_price_imbalance else 1.0)
-                    if (scenario["system_imbalance"][hour] == 1.0)
+                    if (scenario["system_imbalance"][hour] > 0.5)
                     else 0.85
                 )
                 - imbalance_negative[hour]
                 * scenario["da_prices"][hour]
                 * (
                     (0.85 if self.one_price_imbalance else 1.0)
-                    if (scenario["system_imbalance"][hour] == 0.0)
+                    if (scenario["system_imbalance"][hour] <= 0.5)
                     else 1.25
                 )
                 for hour in range(24)

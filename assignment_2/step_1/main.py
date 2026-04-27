@@ -66,7 +66,7 @@ def main() -> None:
     plt.plot(one_price.bid_quantities, label="One-price Bids", marker="o")
     plt.plot(two_price.bid_quantities, label="Two-price Bids", marker="s")
     plt.xlabel("Hour")
-    plt.ylabel("Bid Quantity")
+    plt.ylabel("Bid Quantity [MWh]")
     plt.title("Bidding Results")
     plt.legend()
     plt.show()
@@ -76,19 +76,23 @@ def main() -> None:
         for x in zip(
             *sorted(
                 zip(one_price.scenarios_profit, two_price.scenarios_profit, strict=True)
-            )
+            ),
+            strict=True,
         )
     )
     plt.figure(figsize=(12, 6))
     plt.plot(one_price_scenarios_profit, label="One-price Scenarios", marker="o")
     plt.plot(two_price_scenarios_profit, label="Two-price Scenarios", marker="s")
     plt.xlabel("Scenario")
-    plt.ylabel("Profit")
+    plt.ylabel("Profit [EUR]")
     plt.title("Profit Results")
     plt.legend()
     plt.show()
 
     # %% Ex-post analysis
+    input("Press Enter to start ex-post analysis...")
+    print("\nStarting ex-post analysis...")
+
     in_sample_profit_one_price = []
     out_of_sample_profit_one_price = []
     in_sample_profit_two_price = []
@@ -150,6 +154,12 @@ def main() -> None:
     print(
         f"Two-price mean out-of-sample profit: {mean_out_of_sample_profit_two_price:.2f}"
     )
+
+    # %% Risk-Averse offering strategy
+    input("Press Enter to start Risk-Averse offering strategy...")
+    print("\nStarting Risk-Averse offering strategy...")
+
+    alpha = 0.90
 
 
 if __name__ == "__main__":
