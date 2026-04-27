@@ -3,8 +3,12 @@
 import time
 
 import matplotlib.pyplot as plt
+import numpy as np
 
-from assignment_2.step_1.bidding_model import DayAheadQuantityBiddingModel
+from assignment_2.step_1.bidding_model import (
+    DayAheadQuantityBiddingModel,
+    RiskAverseDayAheadQuantityBiddingModel,
+)
 from assignment_2.utils.data_loader import (
     load_da_prices,
     load_system_imbalance,
@@ -160,6 +164,84 @@ def main() -> None:
     print("\nStarting Risk-Averse offering strategy...")
 
     alpha = 0.90
+    res = 0.05
+    betas = np.arange(0.0, 1 + res, res)
+
+    in_sample_scenarios = scenarios[:in_sample_size]
+    in_sample_weights = weights[:in_sample_size]
+
+    cvars_one_price = []
+    cvars_two_price = []
+    expected_profits_one_price = []
+    expected_profits_two_price = []
+    bid_quantities_one_price = []
+    bid_quantities_two_price = []
+    runtime_start = time.time()
+    for beta in betas:
+        one_price_risk_averse = RiskAverseDayAheadQuantityBiddingModel(
+            capacity=capacity,
+            scenarios=in_sample_scenarios,
+            weights=in_sample_weights,
+            alpha=alpha,
+            beta=beta,
+            one_price_imbalance=True,
+        )
+        one_price_risk_averse.optimize()
+        cvars_one_price.append(one_price_risk_averse.CVaR)
+        expected_profits_one_price.append(one_price_risk_averse.expected_profit)
+        bid_quantities_one_price.append(one_price_risk_averse.bid_quantities)
+
+        two_price_risk_averse = RiskAverseDayAheadQuantityBiddingModel(
+            capacity=capacity,
+            scenarios=in_sample_scenarios,
+            weights=in_sample_weights,
+            alpha=alpha,
+            beta=beta,
+            one_price_imbalance=False,
+        )
+        two_price_risk_averse.optimize()
+        cvars_two_price.append(two_price_risk_averse.CVaR)
+        expected_profits_two_price.append(two_price_risk_averse.expected_profit)
+        bid_quantities_two_price.append(two_price_risk_averse.bid_quantities)
+
+    runtime_end = time.time()
+    print(
+        f"Runtime for Risk-Averse offering strategy: {runtime_end - runtime_start:.2f} seconds"
+    )
+
+    plt.figure(figsize=(12, 6))
+    plt.plot(cvars_one_price, expected_profits_one_price, label="One-price", marker="o")
+    plt.plot(cvars_two_price, expected_profits_two_price, label="Two-price", marker="s")
+    plt.xlabel("CVaR [EUR]")
+    plt.ylabel("Expected Profit [EUR]")
+    plt.title("Risk-Averse Offering Strategy")
+    plt.legend()
+    plt.grid()
+    plt.show()
+
+    blue = iter(["#0000FF", "#0066FF", "#00AAFF"])
+    red = iter(["#FF0000", "#FF6600", "#FFAA00"])
+    plt.figure(figsize=(12, 6))
+    for i, beta in enumerate(betas):
+        if beta not in [0.0, 0.5, 1.0]:
+            continue
+        plt.plot(
+            bid_quantities_one_price[i],
+            label=f"One-price (beta={beta:.2f})",
+            marker="o",
+            color=next(blue),
+        )
+        plt.plot(
+            bid_quantities_two_price[i],
+            label=f"Two-price (beta={beta:.2f})",
+            marker="s",
+            color=next(red),
+        )
+    plt.xlabel("Hour")
+    plt.ylabel("Bid Quantity [MWh]")
+    plt.title("Risk-Averse Offering Strategy bid quantities")
+    plt.legend()
+    plt.show()
 
 
 if __name__ == "__main__":

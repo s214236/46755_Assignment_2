@@ -40,6 +40,7 @@ class DayAheadQuantityBiddingModel:
         """Create the optimization model."""
         self.model = Model("DayAheadQuantityBidding")
         self.vars: dict[str, tupledict[Any, Var]] = {}
+        self.var: dict[str, Var] = {}
         self.constr: dict[str, Constr] = {}
 
         # Variables
@@ -131,7 +132,7 @@ class DayAheadQuantityBiddingModel:
         self.expected_profit = self.model.objVal
 
         self.scenarios_profit = []
-        for scenario_index, scenario in enumerate(self.scenarios):
+        for _, scenario in enumerate(self.scenarios):
             imbalance_positive = [
                 max(0, scenario["wind_power"][hour] - self.vars["bid_quantity"][hour].X)
                 for hour in range(24)
@@ -177,7 +178,7 @@ class DayAheadQuantityBiddingModel:
             )
 
         total_profit = 0.0
-        for scenario_index, scenario in enumerate(out_of_sample_scenarios):
+        for _, scenario in enumerate(out_of_sample_scenarios):
             imbalance_positive = [
                 max(0, scenario["wind_power"][hour] - self.vars["bid_quantity"][hour].X)
                 for hour in range(24)
@@ -206,3 +207,119 @@ class DayAheadQuantityBiddingModel:
             )
             total_profit += profit
         return total_profit / len(out_of_sample_scenarios)
+
+
+class RiskAverseDayAheadQuantityBiddingModel(DayAheadQuantityBiddingModel):
+    """Optimization model for risk-averse quantity-based bidding in the day-ahead market."""
+
+    def __init__(
+        self,
+        capacity: float,
+        scenarios: list[dict[str, list[float]]],
+        weights: list[float],
+        alpha: float = 0.95,
+        beta: float = 1,
+        one_price_imbalance: bool = True,
+    ) -> None:
+        """Initialize the risk-averse model.
+
+        Args:
+            capacity (float): Maximum quantity that can be bid in each hour.
+            scenarios (list[dict[str, list[float]]]): List of scenarios.
+            weights (list[float]): List of weights for each scenario.
+            alpha (float): Confidence level for CVaR calculation.
+            beta (float): Risk aversion parameter. 1 means only the CVaR is considered, while 0 means only the expected profit is considered.
+            one_price_imbalance (bool): Whether to use a single price for imbalance penalties.
+
+        """
+        self.alpha = alpha
+        self.beta = beta
+        super().__init__(capacity, scenarios, weights, one_price_imbalance)
+
+    def create_model(self) -> None:
+        """Create the optimization model."""
+        super().create_model()
+
+        # Additional variables for CVaR calculation
+        self.var["VaR"] = self.model.addVar(
+            lb=-GRB.INFINITY, ub=GRB.INFINITY, name="VaR"
+        )
+        self.vars["eta"] = self.model.addVars(
+            self.num_scenarios, lb=0.0, ub=GRB.INFINITY, name="eta"
+        )
+
+        # Modify objective to include CVaR
+        self.model.setObjective(
+            (1 - self.beta)
+            * quicksum(
+                self.weights[scenario_index]
+                * quicksum(
+                    self.vars["bid_quantity"][hour] * scenario["da_prices"][hour]
+                    + self.vars["imbalance_positive"][hour, scenario_index]
+                    * scenario["da_prices"][hour]
+                    * (
+                        (1.25 if self.one_price_imbalance else 1.0)
+                        if (scenario["system_imbalance"][hour] > 0.5)
+                        else 0.85
+                    )
+                    - self.vars["imbalance_negative"][hour, scenario_index]
+                    * scenario["da_prices"][hour]
+                    * (
+                        (0.85 if self.one_price_imbalance else 1.0)
+                        if (scenario["system_imbalance"][hour] <= 0.5)
+                        else 1.25
+                    )
+                    for hour in range(24)
+                )
+                for scenario_index, scenario in enumerate(self.scenarios)
+            )
+            + self.beta
+            * (
+                self.var["VaR"]
+                - (1 / (1 - self.alpha))
+                * quicksum(
+                    self.weights[scenario_index] * self.vars["eta"][scenario_index]
+                    for scenario_index in range(self.num_scenarios)
+                )
+            ),
+            GRB.MAXIMIZE,
+        )
+
+        # Constraints for CVaR calculation
+        for scenario_index, scenario in enumerate(self.scenarios):
+            profit = quicksum(
+                self.vars["bid_quantity"][hour] * scenario["da_prices"][hour]
+                + self.vars["imbalance_positive"][hour, scenario_index]
+                * scenario["da_prices"][hour]
+                * (
+                    (1.25 if self.one_price_imbalance else 1.0)
+                    if (scenario["system_imbalance"][hour] > 0.5)
+                    else 0.85
+                )
+                - self.vars["imbalance_negative"][hour, scenario_index]
+                * scenario["da_prices"][hour]
+                * (
+                    (0.85 if self.one_price_imbalance else 1.0)
+                    if (scenario["system_imbalance"][hour] <= 0.5)
+                    else 1.25
+                )
+                for hour in range(24)
+            )
+            self.model.addLConstr(
+                self.vars["eta"][scenario_index] >= self.var["VaR"] - profit,
+                name=f"cvar_constraint_{scenario_index}",
+            )
+
+    def optimize(self) -> None:
+        """Optimize the model."""
+        super().optimize()
+        self.VaR = self.var["VaR"].X
+        self.CVaR = self.VaR - (1 / (1 - self.alpha)) * sum(
+            self.weights[scenario_index] * self.vars["eta"][scenario_index].X
+            for scenario_index in range(self.num_scenarios)
+        )
+
+        self.expected_profit = sum(
+            self.weights[s] * self.scenarios_profit[s]
+            for s in range(self.num_scenarios)
+        )
