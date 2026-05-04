@@ -2,7 +2,7 @@
 This repo contains code and data for group 32 for assignment 2
 
 ## Repo structure
-In the "src" folder, three folders are found:
+In the "assignment_2" folder, three folders are found:
 - "data" contains json files for all data inputs
 - "step_1" is step 1 of the assignment
 - "step_2" is step 2 of the assignment
