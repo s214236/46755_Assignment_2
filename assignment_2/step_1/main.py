@@ -36,6 +36,13 @@ def main() -> None:
         scenario["data"] for scenario in scenarios
     ]
 
+    # Shuffle so in-sample / out-of-sample splits and CV folds are not
+    # biased by the structured order produced by itertools.product.
+    rng = np.random.default_rng(seed=0)
+    order = rng.permutation(len(scenarios))
+    scenarios = [scenarios[i] for i in order]
+    weights = [weights[i] for i in order]
+
     in_sample_scenarios = scenarios[:in_sample_size]
     in_sample_weights = weights[:in_sample_size]
     out_of_sample_scenarios = scenarios[in_sample_size:]

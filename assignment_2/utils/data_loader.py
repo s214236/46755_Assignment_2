@@ -37,3 +37,13 @@ def load_wind_power() -> dict[str, list[float]]:
 def load_system_imbalance() -> dict[str, list[float]]:
     """Load the system imbalance forecast from the json file."""
     return load_json_file("assignment_2/data/system_imbalance.json")
+
+
+def load_in_sample_load() -> dict[str, list[float]]:
+    """Load the 100 in-sample minute-resolution load profiles for step 2."""
+    return load_json_file("assignment_2/data/in_sample_load.json")
+
+
+def load_out_of_sample_load() -> dict[str, list[float]]:
+    """Load the 200 out-of-sample minute-resolution load profiles for step 2."""
+    return load_json_file("assignment_2/data/out_of_sample_load.json")
