@@ -2,11 +2,26 @@
 This repo contains code and data for group 32 for assignment 2
 
 ## Repo structure
-In the "assignment_2" folder, three folders are found:
+In the "assignment_2" folder, four folders are found:
 - "data" contains json files for all data inputs
 - "step_1" is step 1 of the assignment
 - "step_2" is step 2 of the assignment
 - "utils" contains utility scripts for data processing
+
+## Intro
+Each step has its own runnable entry point.
+
+`assignment_2/step_1/main.py` covers the day-ahead and balancing market participation of a 500 MW price-taking wind farm and runs all four tasks of step 1:
+- Builds 1,600 combined scenarios from wind, day-ahead price, and system imbalance data and shuffles them with a fixed seed.
+- Solves the stochastic offering problem on the in-sample subset under both the one-price and two-price balancing schemes (Tasks 1.1 and 1.2), and plots the hourly bids and per-scenario profit distributions.
+- Performs an 8-fold cross-validation with 200 in-sample / 1,400 out-of-sample scenarios per fold and reports the averaged in-sample vs. out-of-sample expected profits for both schemes (Task 1.3).
+- Solves the risk-averse offering problem with CVaR (α = 0.90) sweeping β from 0 to 1, and plots the expected-profit-vs-CVaR efficient frontier and the resulting bid quantities (Task 1.4).
+
+`assignment_2/step_2/main.py` covers the FCR-D Up reserve bid of a stochastic flexible load (0–600 kW) under Energinet's P90 requirement and runs all three tasks of step 2:
+- Loads the 100 in-sample and 200 out-of-sample minute-resolution load profiles.
+- Solves the in-sample reserve-bid problem with both ALSO-X and the CVaR reformulation at ε = 0.10 (Task 2.1).
+- Verifies the P90 requirement on the out-of-sample profiles for both methods, reporting the empirical reliability and expected reserve shortfall (Task 2.2).
+- Sweeps the P-threshold from 80 % to 100 % using ALSO-X and plots the in-sample bid and out-of-sample expected shortfall against the threshold (Task 2.3).
 
 ## Development
 1. Have git installed on your machine.
